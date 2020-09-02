@@ -67,3 +67,18 @@ def standardize_CMC_weather_strings(value):
         return "Snow"
     else:
         return value
+    
+def extract_timespan(data, col_dt, target_col):
+    """Returns a new dataframe with data restricted to the date range in a target column."""
+    
+    df = data.copy()
+    idx = df[df[target_col].isna()==False].set_index(col_dt).index
+    
+    # Function to remove time precision on date values for the min/max.
+    strip = lambda x: x.strftime('%Y-%m-%d')
+    
+    # Provides the minimum/maximum values of the date range.
+    start, end = strip(idx.min()), strip(idx.max())
+    
+    df = df[(df[col_dt] >= start) & (df[col_dt] <= end)]
+    return df
