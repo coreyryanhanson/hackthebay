@@ -1,5 +1,8 @@
+import os
 import re
-
+import gzip
+import numpy as np
+import pandas as pd
 
 def standardize_CMC_tidal_strings(value):
     if type(value) is not str:
@@ -82,3 +85,19 @@ def extract_timespan(data, col_dt, target_col):
     
     df = df[(df[col_dt] >= start) & (df[col_dt] <= end)]
     return df
+
+def noaa_gzip_to_raw(path):
+    with gzip.open(path, "rb") as f:
+        data = f.read().splitlines()
+    return data
+
+def select_noaa_files(station_names, dir_path, start_year, end_year):
+    all_paths = pd.Index([])
+    for year in np.arange(start_year,end_year+1):
+        dir_path_year = os.path.join(dir_path, str(year), "")
+        all_files = pd.Index(os.listdir(dir_path_year))
+        stations = station_names + f"-{year}.gz"
+        intersection = stations.intersection(all_files)
+        paths = dir_path_year + intersection
+        all_paths = all_paths.union(paths, sort=False)
+    return all_paths
