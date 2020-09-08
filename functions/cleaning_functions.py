@@ -109,3 +109,30 @@ def select_noaa_files(station_names, dir_path, start_year, end_year):
         paths = dir_path_year + intersection
         all_paths = all_paths.union(paths, sort=False)
     return all_paths
+
+def remove_suspect_noaa_data(data, quality_column, value_columns, bad_codes):
+    """Iterates through a list of quality codes to remove observations from NOAA data."""
+    
+    df = data.copy()
+    idx = df.index
+    conditions = pd.Series(False, index=idx)
+    for code in bad_codes:
+        conditions = (conditions | (df[quality_column] == code))
+    
+    for column in [*value_columns, quality_column]:
+        df[column] = np.where(conditions, np.nan, df[column])
+
+    return df
+
+def reduce_time_resolution_in_multindex(data, timekey, freq, other_keys):
+    """Aggregates a groupby function based on multiple indexes, while resampling and dropping nans of a specified date index."""
+    
+    df = data.copy()
+    cols = df.columns.difference([timekey, *other_keys], sort=False)
+    
+    #Takes the mean of samples if the datatype is a float (All measured values were). Otherwise takes the first item.
+    functions = ["mean" if df[col].dtype=="float" else "first" for col in cols]
+    agg_list = dict(zip(cols,functions))
+    
+    
+    return df.groupby([pd.Grouper(key=timekey, freq=freq), *other_keys]).agg(agg_list).dropna(how="all").reset_index()
