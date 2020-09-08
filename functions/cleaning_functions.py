@@ -40,6 +40,8 @@ def standardize_CMC_wind_strings(value):
     elif re.match("\D?1\D*10\D*knots", value, flags=re.IGNORECASE):
         return "1 To 10 Knots"
     elif re.match("\D?10\D*20\D*knots", value, flags=re.IGNORECASE):
+        return "10 To 20 Knots"
+    elif re.match(".?Calm", value, flags=re.IGNORECASE):
         return "Calm"
     elif re.match("\D?20\D*30\D*knots", value, flags=re.IGNORECASE):
         return "20 To 30 Knots"
@@ -48,6 +50,12 @@ def standardize_CMC_wind_strings(value):
     else:
         return value
 
+
+def standardize_CMC_wind_dir_strings(value):
+    if type(value) is not str:
+        return value
+    else:
+        return value.upper()
     
 def standardize_CMC_weather_strings(value):
     if type(value) is not str:
