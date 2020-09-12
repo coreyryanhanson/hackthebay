@@ -251,3 +251,48 @@ def aggregate_noaa_quantity(data, output_column, date_column, period_column, val
         df[output_column] = np.where(condition, replacement_values, df[output_column])
             
     return df
+
+
+def parse_ghcn_inventory_to_df(filepath):
+    columns = ["ID", "Latitude", "Longitude", "Element", "Start_Date", "End_Date"]
+    return pd.read_csv(filepath, delim_whitespace=True, names=columns)
+
+
+def parse_ghcn_daily_by_year_File(filepath):
+    columns = ["ID", "Date", "Element", "Data_Value", "M-Flag", "Q-Flag", "S-Flag"]
+    return pd.read_csv(filepath, names=columns, index_col=False)
+
+
+def add_earlier_date_values(data, date_col, id_cols, value_col, days):
+    """Adds columns based on past day values to a dataframe."""
+    
+    df=data.copy()
+    for i in np.arange(1,days+1):
+        suffix = "_" + str(i * 24) + "H"
+        temp_column = date_col + str(i)
+        df[temp_column] = df[date_col] - pd.Timedelta(i, unit="D")
+        df = df.merge(df[[*id_cols, date_col, value_col]], how="left", left_on=[*id_cols, temp_column],
+                      right_on=[*id_cols, date_col], suffixes=(None, suffix))
+        df = df.drop(columns = [temp_column, date_col+suffix])
+    return df
+
+
+def reduce_from_ghcn_daily_by_year(df, id_col, ele_col, flag_col, stations, elements):
+    condition = (df[id_col].isin(stations)) & (df[ele_col].isin(elements)) & (df[flag_col].isna())
+    return df[condition]
+
+
+def expand_ghcn_daily_by_year(data, ele_col, val_col, element_dict, groupby_cols=None):
+    df = data.copy()
+    
+    for element in element_dict.keys():
+        df[element] = np.where(df[ele_col] == element, df[val_col], np.nan)
+        
+        # Adds unit conversions if they exists.
+        if element_dict[element]:
+            df[element] = df[element]/element_dict[element]
+            
+    df.drop(columns=[ele_col, val_col], inplace=True)
+    if groupby_cols:
+        df = df.groupby(groupby_cols).first().reset_index()
+    return df
