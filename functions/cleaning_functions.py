@@ -163,14 +163,23 @@ def reduce_time_resolution_in_multindex(data, timekey, freq, other_keys):
     """Aggregates a groupby function based on multiple indexes, while resampling and dropping nans of a specified date index."""
     
     df = data.copy()
-    cols = df.columns.difference([timekey, *other_keys], sort=False)
     
     #Takes the mean of samples if the datatype is a float (All measured values were). Otherwise takes the first item.
-    functions = ["mean" if df[col].dtype=="float" else "first" for col in cols]
-    agg_list = dict(zip(cols,functions))
-    
+    agg_list = generate_agg_list(df, [timekey, *other_keys], ["float"], "mean", "first")
     
     return df.groupby([pd.Grouper(key=timekey, freq=freq), *other_keys]).agg(agg_list).dropna(how="all").reset_index()
+
+
+def generate_agg_list(df, groupby_keys, main_dtypes, main_func, fallback_func):
+    
+    # Getting column names for the non index items to be grouped.
+    cols = df.columns.difference(groupby_keys, sort=False)
+    
+    # Functions are chosen between main and fallback ones if the datatype is a match.
+    functions = [main_func if df[col].dtype in main_dtypes else fallback_func for col in cols]
+    
+    #Returns a dictionary to use to aggregate the groupby function.
+    return dict(zip(cols,functions))
 
 
 def accumulate_noaa_observations(data, date_column, period_column, value_column, id_columns, cycles, available_period, time_unit="H"):
